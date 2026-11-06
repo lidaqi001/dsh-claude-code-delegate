@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Claude Code delegate",
+    "title": "Claude Code delegation",
     "description": "An agent preset that hands every task to a Claude Code subagent and only schedules and reports."
   }
 }

@@ -1,6 +1,6 @@
 # dsh-claude-code-delegate
 
-**Claude Code 代理** —— DeepSeek Harness 的 Agent preset 插件：新建会话时选择这个模式，
+**Claude Code 委托** —— DeepSeek Harness 的 Agent preset 插件：新建会话时选择这个模式，
 会话就只做调度，每个实际任务都通过 `subagent_claude_code` 交给 **Claude Code 子代理**执行，
 主代理负责理解需求、组织任务说明、转交和汇报结果。
 
@@ -15,7 +15,7 @@ dsh plugin --profile <profile> add dsh-claude-code-delegate
 ```
 
 或在 Web/Desktop 的 **插件** 页面安装（`plugin_manager` 的 `install_bundle`，target 为
-`dsh-claude-code-delegate`）。安装后新建会话，在模式列表里选择 **Claude Code 代理**。
+`dsh-claude-code-delegate`）。安装后新建会话，在模式列表里选择 **Claude Code 委托**。
 
 ### 前置条件
 
@@ -94,14 +94,14 @@ Claude Code 是**一次性外部子代理**：看不到会话历史、不接受�
    `preset-claude-code` 都是 `enabled: true`、`fiberPhase: active`。
 2. **preset 已注册**：`cordis_inspect_query` → `Config.listConfigs`（name 过滤
    `@deepseek-ai/dsh-agent-preset`），应能看到 `preset-claude-code`。
-3. **真实委派**：新建会话选「Claude Code 代理」，先派一个无害任务（例如在临时文件里写一行再读回来），
+3. **真实委派**：新建会话选「Claude Code 委托」，先派一个无害任务（例如在临时文件里写一行再读回来），
    确认 `subagent_claude_code` 工具存在、子代理返回结果并被汇报。
 
 常见故障：
 
 | 现象 | 可能原因 | 处理 |
 |---|---|---|
-| 模式列表里没有「Claude Code 代理」 | 插件未启用 / preset 行挂载失败 | 回到第 1、2 步看诊断 |
+| 模式列表里没有「Claude Code 委托」 | 插件未启用 / preset 行挂载失败 | 回到第 1、2 步看诊断 |
 | 有模式，但主代理说没有 `subagent_claude_code` 工具 | provider 包解析不到或 Host 行未激活 | `list_plugins` 看 `subagent-claude-code-delegate` |
 | 委派立刻失败，诊断指向 query-start | Claude Code 未登录 / SDK 载荷缺失 / 平台不支持 | 先在终端跑一次 `claude` 确认可登录 |
 | 子代理能读不能写、跑不了命令 | `permissionMode` 过于保守（`dontAsk` / `acceptEdits`） | 改成 `auto`，或接受其限制 |

@@ -1,4 +1,4 @@
-# Claude Code 全权代理模式
+# Claude Code 委托模式
 #
 # 本 bundle 做两件事：
 #
@@ -6,7 +6,7 @@
 #    (`claude-code-delegate`)。它不注册任何全局工具，因此其它会话里由
 #    @deepseek-ai/dsh-subagent-claude-code bundle 提供的全局
 #    `subagent_claude_code` 保持原样，互不影响。
-# 2. 声明一个 Agent preset `claude-code`，名字显示为「Claude Code 代理」：
+# 2. 声明一个 Agent preset `claude-code`，名字显示为「Claude Code 委托」：
 #    persona 让主代理只做调度与汇报；preset 内的 `subagent_claude_code`
 #    指向上面的专用 provider（同名工具按 Agent 作用域规则遮蔽全局工具）；
 #    另外保留 ask_user_question 用于澄清，并用 compaction 组压缩长会话。
@@ -34,12 +34,12 @@
         providerName: claude-code-delegate
         permissionMode: auto
 
-    # ---- Preset 层：Claude Code 全权代理模式 ----
+    # ---- Preset 层：Claude Code 委托模式 ----
     - id: preset-claude-code
       name: '@deepseek-ai/dsh-agent-preset'
       config:
         id: claude-code
-        name: Claude Code 代理
+        name: Claude Code 委托
         description: 会话只做调度：每个任务都交给 Claude Code 子代理执行，结果由主代理汇报。
         order: 5
         plugins:
@@ -51,7 +51,7 @@
               complete: true
               includeRuntimeContext: false
               prefix: |-
-                你是「Claude Code 全权代理」模式的调度器。这个模式不自己动手：所有实际工作都交给 Claude Code 子代理完成，你只负责理解请求、组织任务、转交和汇报。
+                你是「Claude Code 委托」模式的调度器。这个模式不自己动手：所有实际工作都交给 Claude Code 子代理完成，你只负责理解请求、组织任务、转交和汇报。
 
                 工作规则：
                 1. 先判断请求是否属于实际工作——写代码、改文件、运行命令、检索仓库、分析数据、查资料等都属于。只有纯寒暄，或对已有结果的简短追问，才可以直接回答。

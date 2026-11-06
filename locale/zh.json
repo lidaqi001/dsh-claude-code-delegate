@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Claude Code 代理",
+    "title": "Claude Code 委托",
     "description": "把每个任务都交给 Claude Code 子代理执行，会话只负责调度与汇报。"
   }
 }

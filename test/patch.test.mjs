@@ -60,7 +60,7 @@ test('preset declaration carries the expected identity and tool name', () => {
 test('persona is the complete system prompt and stays dispatcher-only', () => {
   assert.match(patch, /complete: true/)
   const prefix = patch.match(/prefix: \|-\n([\s\S]*?)\n\n {10}#/)?.[1] ?? patch.split('prefix: |-')[1]
-  assert.ok(prefix && prefix.includes('Claude Code 全权代理'), 'persona text present')
+  assert.ok(prefix && prefix.includes('Claude Code 委托'), 'persona text present')
   assert.ok(prefix.includes('subagent_claude_code'), 'persona names the delegation tool')
   assert.ok(prefix.includes('子代理默认在会话工作目录运行'), 'persona states the child working directory')
 })
@@ -82,5 +82,5 @@ test('locale dictionaries describe the plugin', () => {
 test('README documents installation and the mode name', () => {
   const readme = read('README.md')
   assert.ok(readme.includes('dsh plugin --profile <profile> add dsh-claude-code-delegate'))
-  assert.ok(readme.includes('Claude Code 代理'))
+  assert.ok(readme.includes('Claude Code 委托'))
 })
