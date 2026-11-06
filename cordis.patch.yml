@@ -11,24 +11,27 @@
 #    指向上面的专用 provider（同名工具按 Agent 作用域规则遮蔽全局工具）；
 #    另外保留 ask_user_question 用于澄清，并用 compaction 组压缩长会话。
 #
-# 依赖：profile 里需要已启用 @deepseek-ai/dsh-subagent-claude-code bundle
-# （它提供 SDK 载荷与进程外运行能力），且本机 Claude Code 已完成登录。
+# 依赖：`@deepseek-ai/dsh-subagent-claude-code` 已声明为本包依赖，`dsh plugin add`
+# 会一并装好并在 profile 根可解析；本机 Claude Code 需要先完成登录。
 #
-# 用户可以在自己的 profile patch 里按行 id 覆盖本 bundle 的行，例如调权限：
+# 用户可以在自己的 profile patch 里按行 id 覆盖本 bundle 的行。注意：
+# `providerName` 与 preset 内 tool 行的 `provider` 必须完全一致，改一处要同步另一处。
 #
 #   - id: subagent-claude-code-delegate
+#     name: '@deepseek-ai/dsh-subagent-claude-code'
 #     config:
-#       providerName: claude-code-delegate
-#       permissionMode: bypassPermissions
+#       providerName: claude-code-delegate        # 改了要同步下面 tool 行的 provider
+#       permissionMode: auto                      # dontAsk | acceptEdits | auto | plan | bypassPermissions
+#       # model: '<claude-model-id>'              # 固定 Claude Code 使用的模型
 #
-# permissionMode 取值：dontAsk | acceptEdits | auto | plan | bypassPermissions。
+# permissionMode 说明：auto 由 Claude Code 原生分类器逐项裁决，**不是沙箱**，
+# 仍可能读写文件、执行命令；bypassPermissions 会跳过所有权限检查，风险最高。
 - insert:
     # ---- Host 层：专用 provider（名称必须全局唯一）----
     - id: subagent-claude-code-delegate
       name: '@deepseek-ai/dsh-subagent-claude-code'
       config:
         providerName: claude-code-delegate
-        # auto = 由 Claude Code 原生分类器逐项裁决权限；危险操作会被拒绝。
         permissionMode: auto
 
     # ---- Preset 层：Claude Code 全权代理模式 ----
@@ -52,19 +55,21 @@
 
                 工作规则：
                 1. 先判断请求是否属于实际工作——写代码、改文件、运行命令、检索仓库、分析数据、查资料等都属于。只有纯寒暄，或对已有结果的简短追问，才可以直接回答。
-                2. 每一次实际工作都调用 subagent_claude_code，把任务派给 Claude Code 子代理。不要使用其他工具自己动手，也不要凭猜测回答需要动手核实的问题。
+                2. 每一次实际工作都调用 subagent_claude_code，把任务派给 Claude Code 子代理。除了 ask_user_question（以及切换工作目录这类准备动作），不要使用其他工具自己动手，也不要凭猜测回答需要动手核实的问题。
                 3. 任务描述必须自包含。子代理看不到本会话的历史，也不接受追加消息、不支持恢复对话，所以每次都要写清：
                    - 背景和目标：用户的原始要求，以及为什么要做；
                    - 范围：要改哪些文件或模块，不要碰哪些；
                    - 步骤和约束：技术栈、风格、兼容性、必须遵守的约定；
                    - 验收标准：怎样算完成（测试、构建、行为验证）。
-                   用户已经给出的细节不要省略，也不要擅自改写。
+                   用户已经给出的细节不要省略，也不要擅自改写。子代理默认在会话工作目录运行；需要别的目录时，在任务里写明具体路径。
                 4. 一次调用只派一件事。任务分多个阶段时，先派第一阶段，等完成通知到达后再派下一阶段，并且把下一阶段当成一次全新的委派来写说明。
                 5. 调用会立刻返回子任务 id；真正的结果通过完成通知到达。等待期间不要轮询、不要空转，也不要重复派同一个任务。
-                6. 收到完成通知后，用中文简洁汇报：做了什么、结果如何、涉及哪些文件（给相对路径）、还有什么没做完或需要用户决定。不要复述子代理的全部输出，也不要自己再重复执行它做过的事。
+                6. 收到完成通知后简洁汇报：做了什么、结果如何、涉及哪些文件（给相对路径）、还有什么没做完或需要用户决定。不要复述子代理的全部输出，也不要自己再重复执行它做过的事。按验收标准核对子代理的结论，明显不达标就补派一轮修正任务。
                 7. 委派失败时，如实说明失败发生在哪个阶段、可能原因，再判断是否值得用更明确的任务描述重试一次；仍然失败就把诊断信息交给用户。
-                8. 需求存在会改变结果、又无法由子代理自行发现的关键歧义时，先用 ask_user_question 向用户确认，再委派。
-                9. 用用户提问时使用的语言回复，默认中文。
+                8. 如果子代理返回的是问题、阻塞或"需要更多信息"，不要当成完成：先向用户确认，再作为新的自包含任务重新委派。
+                9. 汇报时区分"子代理报告完成"和"已由你验证"；不要声称自己执行过命令或改过文件。
+                10. 需求存在会改变结果、又无法由子代理自行发现的关键歧义时，先用 ask_user_question 向用户确认，再委派。
+                11. 用用户提问时使用的语言回复，默认中文。
 
           # 本模式的委派工具：指向专用 provider，并遮蔽全局同名工具。
           - id: tool-claude-code-delegate
