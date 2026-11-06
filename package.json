@@ -1,0 +1,52 @@
+{
+  "name": "dsh-claude-code-delegate",
+  "version": "1.0.0",
+  "description": "DeepSeek Harness agent preset that delegates every task to a Claude Code subagent and only schedules and reports results.",
+  "type": "module",
+  "license": "MIT",
+  "author": "liqi",
+  "homepage": "https://github.com/lidaqi001/dsh-claude-code-delegate#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lidaqi001/dsh-claude-code-delegate.git"
+  },
+  "bugs": {
+    "url": "https://github.com/lidaqi001/dsh-claude-code-delegate/issues"
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "dsh-bundle",
+    "agent-preset",
+    "claude-code",
+    "claude",
+    "subagent",
+    "delegation"
+  ],
+  "engines": {
+    "dsh": ">=0.2.1 <0.3.0-0"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-subagent-claude-code": ">=0.2.1-rc.1 <0.2.2-0 || >=0.2.2-rc.1 <0.3.0-0"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "package.json",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "icon": "./icon.svg",
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

@@ -1,0 +1,91 @@
+# Claude Code 全权代理模式
+#
+# 本 bundle 做两件事：
+#
+# 1. 在 Host 层注册一个专用的 Claude Code subagent provider
+#    (`claude-code-delegate`)。它不注册任何全局工具，因此其它会话里由
+#    @deepseek-ai/dsh-subagent-claude-code bundle 提供的全局
+#    `subagent_claude_code` 保持原样，互不影响。
+# 2. 声明一个 Agent preset `claude-code`，名字显示为「Claude Code 代理」：
+#    persona 让主代理只做调度与汇报；preset 内的 `subagent_claude_code`
+#    指向上面的专用 provider（同名工具按 Agent 作用域规则遮蔽全局工具）；
+#    另外保留 ask_user_question 用于澄清，并用 compaction 组压缩长会话。
+#
+# 依赖：profile 里需要已启用 @deepseek-ai/dsh-subagent-claude-code bundle
+# （它提供 SDK 载荷与进程外运行能力），且本机 Claude Code 已完成登录。
+#
+# 用户可以在自己的 profile patch 里按行 id 覆盖本 bundle 的行，例如调权限：
+#
+#   - id: subagent-claude-code-delegate
+#     config:
+#       providerName: claude-code-delegate
+#       permissionMode: bypassPermissions
+#
+# permissionMode 取值：dontAsk | acceptEdits | auto | plan | bypassPermissions。
+- insert:
+    # ---- Host 层：专用 provider（名称必须全局唯一）----
+    - id: subagent-claude-code-delegate
+      name: '@deepseek-ai/dsh-subagent-claude-code'
+      config:
+        providerName: claude-code-delegate
+        # auto = 由 Claude Code 原生分类器逐项裁决权限；危险操作会被拒绝。
+        permissionMode: auto
+
+    # ---- Preset 层：Claude Code 全权代理模式 ----
+    - id: preset-claude-code
+      name: '@deepseek-ai/dsh-agent-preset'
+      config:
+        id: claude-code
+        name: Claude Code 代理
+        description: 会话只做调度：每个任务都交给 Claude Code 子代理执行，结果由主代理汇报。
+        order: 5
+        plugins:
+          - id: persona
+            name: '@deepseek-ai/dsh-persona'
+            config:
+              # complete: true 让这段文字成为该会话唯一的系统提示词，
+              # 避免其它提示词段落把主代理引向"自己动手"。
+              complete: true
+              includeRuntimeContext: false
+              prefix: |-
+                你是「Claude Code 全权代理」模式的调度器。这个模式不自己动手：所有实际工作都交给 Claude Code 子代理完成，你只负责理解请求、组织任务、转交和汇报。
+
+                工作规则：
+                1. 先判断请求是否属于实际工作——写代码、改文件、运行命令、检索仓库、分析数据、查资料等都属于。只有纯寒暄，或对已有结果的简短追问，才可以直接回答。
+                2. 每一次实际工作都调用 subagent_claude_code，把任务派给 Claude Code 子代理。不要使用其他工具自己动手，也不要凭猜测回答需要动手核实的问题。
+                3. 任务描述必须自包含。子代理看不到本会话的历史，也不接受追加消息、不支持恢复对话，所以每次都要写清：
+                   - 背景和目标：用户的原始要求，以及为什么要做；
+                   - 范围：要改哪些文件或模块，不要碰哪些；
+                   - 步骤和约束：技术栈、风格、兼容性、必须遵守的约定；
+                   - 验收标准：怎样算完成（测试、构建、行为验证）。
+                   用户已经给出的细节不要省略，也不要擅自改写。
+                4. 一次调用只派一件事。任务分多个阶段时，先派第一阶段，等完成通知到达后再派下一阶段，并且把下一阶段当成一次全新的委派来写说明。
+                5. 调用会立刻返回子任务 id；真正的结果通过完成通知到达。等待期间不要轮询、不要空转，也不要重复派同一个任务。
+                6. 收到完成通知后，用中文简洁汇报：做了什么、结果如何、涉及哪些文件（给相对路径）、还有什么没做完或需要用户决定。不要复述子代理的全部输出，也不要自己再重复执行它做过的事。
+                7. 委派失败时，如实说明失败发生在哪个阶段、可能原因，再判断是否值得用更明确的任务描述重试一次；仍然失败就把诊断信息交给用户。
+                8. 需求存在会改变结果、又无法由子代理自行发现的关键歧义时，先用 ask_user_question 向用户确认，再委派。
+                9. 用用户提问时使用的语言回复，默认中文。
+
+          # 本模式的委派工具：指向专用 provider，并遮蔽全局同名工具。
+          - id: tool-claude-code-delegate
+            name: '@deepseek-ai/dsh-tool-subagent'
+            config:
+              provider: claude-code-delegate
+              toolName: subagent_claude_code
+              maxDepth: provider-managed
+
+          # 主代理唯一保留的"自己"工具：向用户澄清需求。
+          - id: tool-ask-user
+            name: '@deepseek-ai/dsh-tool-ask-user'
+
+          # 长会话压缩：委派结果会持续累积，避免上下文溢出。
+          - id: compaction
+            name: cordis:group
+            group: true
+            isolate:
+              compaction: true
+            config:
+              - id: compaction-basic
+                name: '@deepseek-ai/dsh-compaction-basic'
+              - id: command-compact
+                name: '@deepseek-ai/dsh-command-compact'
